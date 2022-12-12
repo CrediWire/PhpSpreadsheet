@@ -9,11 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 
 ### Added
 
-- Nothing.
+- Implemented DataBar for conditional formatting in Xlsx, providing read/write and creation of (type, value, direction, fills, border, axis position, color settings) as DataBar options in Excel. [#1754](https://github.com/PHPOffice/PhpSpreadsheet/pull/1754)
 
 ### Changed
 
-- Nothing.
+- Formula functions that previously called PHP functions directly are now processed through the Excel Functions classes; resolving issues with PHP8 stricter typing. [#1789](https://github.com/PHPOffice/PhpSpreadsheet/issues/1789)
+
+  The following MathTrig functions are affected:
+  `ABS()`, `ACOS()`, `ACOSH()`, `ASIN()`, `ASINH()`, `ATAN()`, `ATANH()`,
+  `COS()`, `COSH()`, `DEGREES()` (rad2deg), `EXP()`, `LN()` (log), `LOG10()`,
+  `RADIANS()` (deg2rad), `SIN()`, `SINH()`, `SQRT()`, `TAN()`, `TANH()`.
+  
+  One TextData function is also affected: `REPT()` (str_repeat).
 
 ### Deprecated
 
@@ -25,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 
 ### Fixed
 
-- Nothing.
+- Fix For Null Exception on ODS Read of Page Settings. [#1772](https://github.com/PHPOffice/PhpSpreadsheet/issues/1772)
+- Fix Xlsx reader overriding manually set number format with builtin number format. [PR #1805](https://github.com/PHPOffice/PhpSpreadsheet/pull/1805)
 
 ## 1.16.0 - 2020-12-31
 
@@ -36,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org).
 ### Changed
 
 - Updated the CONVERT() function to support all current MS Excel categories and Units of Measure.
+- `formatAsDate` correctly matches language metadata, reverting c55272e
 
 ### Deprecated
 
