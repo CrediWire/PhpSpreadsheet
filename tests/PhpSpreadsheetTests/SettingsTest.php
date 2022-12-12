@@ -2,15 +2,16 @@
 
 namespace PhpOffice\PhpSpreadsheetTests;
 
+use PhpOffice\PhpSpreadsheet\Exception as SpException;
 use PhpOffice\PhpSpreadsheet\Settings;
 use PHPUnit\Framework\TestCase;
 
 class SettingsTest extends TestCase
 {
     /**
-     * @var string
+     * @var bool
      */
-    protected $prevValue;
+    private $prevValue;
 
     protected function setUp(): void
     {
@@ -41,6 +42,7 @@ class SettingsTest extends TestCase
 
     public function testSetXMLSettings(): void
     {
+        $original = Settings::getLibXmlLoaderOptions();
         Settings::setLibXmlLoaderOptions(LIBXML_DTDLOAD | LIBXML_DTDATTR | LIBXML_DTDVALID);
         $result = Settings::getLibXmlLoaderOptions();
         self::assertTrue((bool) ((LIBXML_DTDLOAD | LIBXML_DTDATTR | LIBXML_DTDVALID) & $result));
@@ -48,5 +50,13 @@ class SettingsTest extends TestCase
         if (\PHP_VERSION_ID < 80000) {
             self::assertFalse(libxml_disable_entity_loader());
         }
+        Settings::setLibXmlLoaderOptions($original);
+    }
+
+    public function testInvalidChartRenderer(): void
+    {
+        $this->expectException(SpException::class);
+        $this->expectExceptionMessage('Chart renderer must implement');
+        Settings::setChartRenderer(self::class);
     }
 }

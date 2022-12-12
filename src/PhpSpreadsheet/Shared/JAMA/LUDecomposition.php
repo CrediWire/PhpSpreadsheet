@@ -64,7 +64,7 @@ class LUDecomposition
     /**
      * LU Decomposition constructor.
      *
-     * @param Matrix $A Rectangular matrix
+     * @param ?Matrix $A Rectangular matrix
      */
     public function __construct($A)
     {
@@ -77,7 +77,7 @@ class LUDecomposition
                 $this->piv[$i] = $i;
             }
             $this->pivsign = 1;
-            $LUrowi = $LUcolj = [];
+            $LUcolj = [];
 
             // Outer loop.
             for ($j = 0; $j < $this->n; ++$j) {
@@ -135,6 +135,7 @@ class LUDecomposition
      */
     public function getL()
     {
+        $L = [];
         for ($i = 0; $i < $this->m; ++$i) {
             for ($j = 0; $j < $this->n; ++$j) {
                 if ($i > $j) {
@@ -159,6 +160,7 @@ class LUDecomposition
      */
     public function getU()
     {
+        $U = [];
         for ($i = 0; $i < $this->n; ++$i) {
             for ($j = 0; $j < $this->n; ++$j) {
                 if ($i <= $j) {
@@ -189,7 +191,9 @@ class LUDecomposition
     /**
      * Alias for getPivot.
      *
-     *    @see getPivot
+     * @see getPivot
+     *
+     * @return array Pivot vector
      */
     public function getDoublePivot()
     {
@@ -219,7 +223,7 @@ class LUDecomposition
     /**
      * Count determinants.
      *
-     * @return array d matrix deterninat
+     * @return float
      */
     public function det()
     {

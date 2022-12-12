@@ -4,13 +4,21 @@ namespace PhpOffice\PhpSpreadsheetTests\Calculation;
 
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\Calculation\Functions;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PHPUnit\Framework\TestCase;
 
 class CalculationTest extends TestCase
 {
+    /**
+     * @var string
+     */
     private $compatibilityMode;
 
+    /**
+     * @var string
+     */
     private $locale;
 
     protected function setUp(): void
@@ -46,70 +54,9 @@ class CalculationTest extends TestCase
         self::assertEquals($expectedResultOpenOffice, $resultOpenOffice, 'should be OpenOffice compatible');
     }
 
-    public function providerBinaryComparisonOperation()
+    public function providerBinaryComparisonOperation(): array
     {
         return require 'tests/data/CalculationBinaryComparisonOperation.php';
-    }
-
-    /**
-     * @dataProvider providerGetFunctions
-     *
-     * @param string $category
-     * @param array|string $functionCall
-     * @param string $argumentCount
-     */
-    public function testGetFunctions($category, $functionCall, $argumentCount): void
-    {
-        self::assertIsCallable($functionCall);
-    }
-
-    public function providerGetFunctions()
-    {
-        return Calculation::getInstance()->getFunctions();
-    }
-
-    public function testIsImplemented(): void
-    {
-        $calculation = Calculation::getInstance();
-        self::assertFalse($calculation->isImplemented('non-existing-function'));
-        self::assertFalse($calculation->isImplemented('AREAS'));
-        self::assertTrue($calculation->isImplemented('coUNt'));
-        self::assertTrue($calculation->isImplemented('abs'));
-    }
-
-    /**
-     * @dataProvider providerCanLoadAllSupportedLocales
-     *
-     * @param string $locale
-     */
-    public function testCanLoadAllSupportedLocales($locale): void
-    {
-        $calculation = Calculation::getInstance();
-        self::assertTrue($calculation->setLocale($locale));
-    }
-
-    public function providerCanLoadAllSupportedLocales()
-    {
-        return [
-            ['bg'],
-            ['cs'],
-            ['da'],
-            ['de'],
-            ['en_us'],
-            ['es'],
-            ['fi'],
-            ['fr'],
-            ['hu'],
-            ['it'],
-            ['nl'],
-            ['no'],
-            ['pl'],
-            ['pt'],
-            ['pt_br'],
-            ['ru'],
-            ['sv'],
-            ['tr'],
-        ];
     }
 
     public function testDoesHandleXlfnFunctions(): void
@@ -117,11 +64,13 @@ class CalculationTest extends TestCase
         $calculation = Calculation::getInstance();
 
         $tree = $calculation->parseFormula('=_xlfn.ISFORMULA(A1)');
+        self::assertIsArray($tree);
         self::assertCount(3, $tree);
         $function = $tree[2];
         self::assertEquals('Function', $function['type']);
 
         $tree = $calculation->parseFormula('=_xlfn.STDEV.S(A1:B2)');
+        self::assertIsArray($tree);
         self::assertCount(5, $tree);
         $function = $tree[4];
         self::assertEquals('Function', $function['type']);
@@ -159,6 +108,14 @@ class CalculationTest extends TestCase
         $cell->getStyle()->setQuotePrefix(true);
 
         self::assertEquals("=cmd|'/C calc'!A0", $cell->getCalculatedValue());
+
+        $cell2 = $workSheet->getCell('A2');
+        $cell2->setValueExplicit('ABC', DataType::TYPE_FORMULA);
+        self::assertEquals('ABC', $cell2->getCalculatedValue());
+
+        $cell3 = $workSheet->getCell('A3');
+        $cell3->setValueExplicit('=', DataType::TYPE_FORMULA);
+        self::assertEquals('', $cell3->getCalculatedValue());
     }
 
     public function testCellWithDdeExpresion(): void
@@ -170,6 +127,42 @@ class CalculationTest extends TestCase
         $cell->setValue("=cmd|'/C calc'!A0");
 
         self::assertEquals("=cmd|'/C calc'!A0", $cell->getCalculatedValue());
+    }
+
+    public function testFormulaReferencingWorksheetWithEscapedApostrophe(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $workSheet->setTitle("Catégorie d'absence");
+
+        $workSheet->setCellValue('A1', 'HELLO');
+        $workSheet->setCellValue('B1', ' ');
+        $workSheet->setCellValue('C1', 'WORLD');
+        $workSheet->setCellValue(
+            'A2',
+            "=CONCAT('Catégorie d''absence'!A1, 'Catégorie d''absence'!B1, 'Catégorie d''absence'!C1)"
+        );
+
+        $cellValue = $workSheet->getCell('A2')->getCalculatedValue();
+        self::assertSame('HELLO WORLD', $cellValue);
+    }
+
+    public function testFormulaReferencingWorksheetWithUnescapedApostrophe(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $workSheet->setTitle("Catégorie d'absence");
+
+        $workSheet->setCellValue('A1', 'HELLO');
+        $workSheet->setCellValue('B1', ' ');
+        $workSheet->setCellValue('C1', 'WORLD');
+        $workSheet->setCellValue(
+            'A2',
+            "=CONCAT('Catégorie d'absence'!A1, 'Catégorie d'absence'!B1, 'Catégorie d'absence'!C1)"
+        );
+
+        $cellValue = $workSheet->getCell('A2')->getCalculatedValue();
+        self::assertSame('HELLO WORLD', $cellValue);
     }
 
     public function testCellWithFormulaTwoIndirect(): void
@@ -188,6 +181,56 @@ class CalculationTest extends TestCase
         self::assertEquals('9', $cell3->getCalculatedValue());
     }
 
+    public function testCellWithStringNumeric(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $cell1 = $workSheet->getCell('A1');
+        $cell1->setValue('+2.5');
+        $cell2 = $workSheet->getCell('B1');
+        $cell2->setValue('=100*A1');
+
+        self::assertSame(250.0, $cell2->getCalculatedValue());
+    }
+
+    public function testCellWithStringFraction(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $cell1 = $workSheet->getCell('A1');
+        $cell1->setValue('3/4');
+        $cell2 = $workSheet->getCell('B1');
+        $cell2->setValue('=100*A1');
+
+        self::assertSame(75.0, $cell2->getCalculatedValue());
+    }
+
+    public function testCellWithStringPercentage(): void
+    {
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $cell1 = $workSheet->getCell('A1');
+        $cell1->setValue('2%');
+        $cell2 = $workSheet->getCell('B1');
+        $cell2->setValue('=100*A1');
+
+        self::assertSame(2.0, $cell2->getCalculatedValue());
+    }
+
+    public function testCellWithStringCurrency(): void
+    {
+        $currencyCode = StringHelper::getCurrencyCode();
+
+        $spreadsheet = new Spreadsheet();
+        $workSheet = $spreadsheet->getActiveSheet();
+        $cell1 = $workSheet->getCell('A1');
+        $cell1->setValue($currencyCode . '2');
+        $cell2 = $workSheet->getCell('B1');
+        $cell2->setValue('=100*A1');
+
+        self::assertSame(200.0, $cell2->getCalculatedValue());
+    }
+
     public function testBranchPruningFormulaParsingSimpleCase(): void
     {
         $calculation = Calculation::getInstance();
@@ -196,6 +239,7 @@ class CalculationTest extends TestCase
         // Very simple formula
         $formula = '=IF(A1="please +",B1)';
         $tokens = $calculation->parseFormula($formula);
+        self::assertIsArray($tokens);
 
         $foundEqualAssociatedToStoreKey = false;
         $foundConditionalOnB1 = false;
@@ -225,6 +269,7 @@ class CalculationTest extends TestCase
         // Internal operation
         $formula = '=IF(A1="please +",SUM(B1:B3))+IF(A2="please *",PRODUCT(C1:C3), C1)';
         $tokens = $calculation->parseFormula($formula);
+        self::assertIsArray($tokens);
 
         $plusGotTagged = false;
         $productFunctionCorrectlyTagged = false;
@@ -254,6 +299,7 @@ class CalculationTest extends TestCase
 
         $formula = '=IF(A1="please +",SUM(B1:B3),1+IF(NOT(A2="please *"),C2-C1,PRODUCT(C1:C3)))';
         $tokens = $calculation->parseFormula($formula);
+        self::assertIsArray($tokens);
 
         $plusCorrectlyTagged = false;
         $productFunctionCorrectlyTagged = false;
@@ -298,6 +344,8 @@ class CalculationTest extends TestCase
 
         $formula = '=IF(A1="flag",IF(A2<10, 0) + IF(A3<10000, 0))';
         $tokens = $calculation->parseFormula($formula);
+        self::assertIsArray($tokens);
+
         $properlyTaggedPlus = false;
         foreach ($tokens as $token) {
             $isPlus = $token['value'] === '+';
@@ -310,8 +358,8 @@ class CalculationTest extends TestCase
     }
 
     /**
-     * @param $expectedResult
-     * @param $dataArray
+     * @param mixed $expectedResult
+     * @param mixed $dataArray
      * @param string $formula
      * @param string $cellCoordinates where to put the formula
      * @param string[] $shouldBeSetInCacheCells coordinates of cells that must
@@ -358,22 +406,8 @@ class CalculationTest extends TestCase
         self::assertEquals($expectedResult, $calculated);
     }
 
-    public function dataProviderBranchPruningFullExecution()
+    public function dataProviderBranchPruningFullExecution(): array
     {
         return require 'tests/data/Calculation/Calculation.php';
-    }
-
-    public function testUnknownFunction(): void
-    {
-        $workbook = new Spreadsheet();
-        $sheet = $workbook->getActiveSheet();
-        $sheet->setCellValue('A1', '=gzorg()');
-        $sheet->setCellValue('A2', '=mode.gzorg(1)');
-        $sheet->setCellValue('A3', '=gzorg(1,2)');
-        $sheet->setCellValue('A4', '=3+IF(gzorg(),1,2)');
-        self::assertEquals('#NAME?', $sheet->getCell('A1')->getCalculatedValue());
-        self::assertEquals('#NAME?', $sheet->getCell('A2')->getCalculatedValue());
-        self::assertEquals('#NAME?', $sheet->getCell('A3')->getCalculatedValue());
-        self::assertEquals('#NAME?', $sheet->getCell('A4')->getCalculatedValue());
     }
 }

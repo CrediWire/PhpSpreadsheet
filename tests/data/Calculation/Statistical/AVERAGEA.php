@@ -6,7 +6,7 @@ return [
         [10, 7, 9, 2],
     ],
     [
-        5.6,
+        [5.6, '#VALUE!'],
         [10, 7, 9, 2, 'STRING VALUE'],
     ],
     [
@@ -20,5 +20,13 @@ return [
     [
         0.5,
         [true, false],
+    ],
+    [
+        0.666666666667,
+        [true, false, 1],
+    ],
+    'no arguments' => [
+        ['#DIV/0!', 'exception'],
+        [],
     ],
 ];

@@ -2,23 +2,19 @@
 
 namespace PhpOffice\PhpSpreadsheetTests\Calculation\Functions\Statistical;
 
-use PhpOffice\PhpSpreadsheet\Calculation\Statistical;
-use PHPUnit\Framework\TestCase;
-
-class KurtTest extends TestCase
+class KurtTest extends AllSetupTeardown
 {
     /**
      * @dataProvider providerKURT
      *
      * @param mixed $expectedResult
      */
-    public function testKURT($expectedResult, ...$values): void
+    public function testKURT($expectedResult, ...$args): void
     {
-        $result = Statistical::KURT(...$values);
-        self::assertEqualsWithDelta($expectedResult, $result, 1E-12);
+        $this->runTestCases('KURT', $expectedResult, ...$args);
     }
 
-    public function providerKURT()
+    public function providerKURT(): array
     {
         return require 'tests/data/Calculation/Statistical/KURT.php';
     }

@@ -2,18 +2,11 @@
 
 namespace PhpOffice\PhpSpreadsheetTests\Calculation\Functions\Engineering;
 
-use PhpOffice\PhpSpreadsheet\Calculation\Engineering;
-use PhpOffice\PhpSpreadsheet\Calculation\Functions;
-use PHPUnit\Framework\TestCase;
+use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 
-class ErfCTest extends TestCase
+class ErfCTest extends AllSetupTeardown
 {
     const ERF_PRECISION = 1E-12;
-
-    protected function setUp(): void
-    {
-        Functions::setCompatibilityMode(Functions::COMPATIBILITY_EXCEL);
-    }
 
     /**
      * @dataProvider providerERFC
@@ -22,13 +15,35 @@ class ErfCTest extends TestCase
      */
     public function testERFC($expectedResult, ...$args): void
     {
-        $result = Engineering::ERFC(...$args);
-        self::assertEquals($expectedResult, $result);
+        $this->runTestCase('ERFC', $expectedResult, ...$args);
+    }
+
+    public function providerERFC(): array
+    {
+        return require 'tests/data/Calculation/Engineering/ERFC.php';
+    }
+
+    /**
+     * @dataProvider providerErfCArray
+     */
+    public function testErfCArray(array $expectedResult, string $lower): void
+    {
+        $calculation = Calculation::getInstance();
+
+        $formula = "=ERFC({$lower})";
+        $result = $calculation->_calculateFormulaValue($formula);
         self::assertEqualsWithDelta($expectedResult, $result, self::ERF_PRECISION);
     }
 
-    public function providerERFC()
+    public function providerErfCArray(): array
     {
-        return require 'tests/data/Calculation/Engineering/ERFC.php';
+        return [
+            'row vector' => [
+                [
+                    [1.9103139782296354, 1.5204998778130465, 1.0, 0.7236736098317631, 0.0004069520174449588],
+                ],
+                '{-1.2, -0.5, 0.0, 0.25, 2.5}',
+            ],
+        ];
     }
 }

@@ -10,13 +10,21 @@ use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Ods;
 use PhpOffice\PhpSpreadsheet\Writer\Ods\Content;
 use PHPUnit\Framework\TestCase;
 
 class ContentTest extends TestCase
 {
+    /**
+     * @var string
+     */
     private $samplesPath = 'tests/data/Writer/Ods';
+
+    /**
+     * @var string
+     */
 
     /**
      * @var string
@@ -59,6 +67,7 @@ class ContentTest extends TestCase
 
         $worksheet1->setCellValue('A2', true); // Boolean
         $worksheet1->setCellValue('B2', false); // Boolean
+
         $worksheet1->setCellValueExplicit(
             'C2',
             '=IF(A3, CONCATENATE(A1, " ", A2), CONCATENATE(A2, " ", A1))',
@@ -69,6 +78,9 @@ class ContentTest extends TestCase
         $worksheet1->getStyle('D2')
             ->getNumberFormat()
             ->setFormatCode(NumberFormat::FORMAT_DATE_DATETIME);
+
+        $worksheet1->setCellValueExplicit('F1', null, DataType::TYPE_ERROR);
+        $worksheet1->setCellValueExplicit('G1', 'Lorem ipsum', DataType::TYPE_INLINE);
 
         // Styles
         $worksheet1->getStyle('A1')->getFont()->setBold(true);
@@ -94,5 +106,27 @@ class ContentTest extends TestCase
         $xml = $content->write();
 
         self::assertXmlStringEqualsXmlFile($this->samplesPath . '/content-with-data.xml', $xml);
+    }
+
+    public function testWriteWithHiddenWorksheet(): void
+    {
+        $workbook = new Spreadsheet();
+
+        // Worksheet 1
+        $worksheet1 = $workbook->getActiveSheet();
+        $worksheet1->setCellValue('A1', 1);
+
+        // Worksheet 2
+        $worksheet2 = $workbook->createSheet();
+        $worksheet2->setTitle('New Worksheet');
+        $worksheet2->setCellValue('A1', 2);
+
+        $worksheet2->setSheetState(Worksheet::SHEETSTATE_HIDDEN);
+
+        // Write
+        $content = new Content(new Ods($workbook));
+        $xml = $content->write();
+
+        self::assertXmlStringEqualsXmlFile($this->samplesPath . '/content-hidden-worksheet.xml', $xml);
     }
 }
