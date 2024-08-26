@@ -900,8 +900,11 @@ class Worksheet extends WriterPart
         $aRowBreaks = [];
         $aColumnBreaks = [];
         foreach ($pSheet->getBreaks() as $cell => $breakType) {
-            if ($breakType == PhpspreadsheetWorksheet::BREAK_ROW) {
-                $aRowBreaks[] = $cell;
+            if (
+                $breakType == PhpspreadsheetWorksheet::BREAK_ROW
+                || $breakType == PhpspreadsheetWorksheet::BREAK_ROW_MAX
+            ) {
+                $aRowBreaks[] = [$cell, $breakType];
             } elseif ($breakType == PhpspreadsheetWorksheet::BREAK_COLUMN) {
                 $aColumnBreaks[] = $cell;
             }
@@ -913,12 +916,16 @@ class Worksheet extends WriterPart
             $objWriter->writeAttribute('count', count($aRowBreaks));
             $objWriter->writeAttribute('manualBreakCount', count($aRowBreaks));
 
-            foreach ($aRowBreaks as $cell) {
+            foreach ($aRowBreaks as $break) {
+                list($cell, $breakType) = $break;
                 $coords = Coordinate::coordinateFromString($cell);
 
                 $objWriter->startElement('brk');
                 $objWriter->writeAttribute('id', $coords[1]);
                 $objWriter->writeAttribute('man', '1');
+                if ($breakType === PhpspreadsheetWorksheet::BREAK_ROW_MAX) {
+                    $objWriter->writeAttribute('max', '16383');
+                }
                 $objWriter->endElement();
             }
 

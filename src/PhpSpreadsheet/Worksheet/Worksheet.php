@@ -31,6 +31,7 @@ class Worksheet implements IComparable
     const BREAK_NONE = 0;
     const BREAK_ROW = 1;
     const BREAK_COLUMN = 2;
+    const BREAK_ROW_MAX = 2;
 
     // Sheet state
     const SHEETSTATE_VISIBLE = 'visible';
